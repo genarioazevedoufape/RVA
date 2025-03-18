@@ -4,8 +4,8 @@
     <title>VR 3D Image Viewer (Meta Quest)</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@master/dist/aframe-extras.controls.min.js"></script>
     <style>
-      /* Estilo para o botão */
       #toggle-button {
         position: absolute;
         top: 20px;
@@ -14,7 +14,7 @@
         background-color: #0078d4;
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: 10px;
         cursor: pointer;
         z-index: 1000;
       }
@@ -22,6 +22,43 @@
         background-color: #005bb5;
       }
     </style>
+  </head>
+  <body>
+    <button id="toggle-button">Mostrar Órgãos Individuais</button>
+    <a-scene vr-mode-ui="enabled: true">
+      <a-entity laser-controls="hand: right"></a-entity>
+      <a-entity laser-controls="hand: left"></a-entity>
+      <a-entity cursor="rayOrigin: mouse"></a-entity>
+
+      <a-entity id="rig" position="0 1.6 0" movement-controls>
+        <a-camera wasd-controls="acceleration: 50">
+          <a-entity oculus-touch-controls="hand: left"></a-entity>
+          <a-entity oculus-touch-controls="hand: right"></a-entity>
+        </a-camera>
+      </a-entity>
+
+      <a-entity id="model-container" gltf-model="url(assets/orgaos.glb)"
+        scale="0.5 0.5 0.5" position="0 2.9 -3" rotation="0 0 0"
+        grabbable stretchable draggable
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear">
+      </a-entity>
+
+      <!-- Iluminação Ambiente -->
+      <a-light type="ambient" color="#FFFFFF" intensity="1.2"></a-light>
+
+      <!-- Luz Direcional (Simula o Sol) -->
+      <a-light type="directional" color="#FFFFFF" intensity="1.2" position="0 0 0" cast-shadow>
+        <a-entity position="0 0 0" rotation="0 0 0"></a-entity>
+      </a-light>
+
+      <!-- Luz Pontual (Iluminação adicional) -->
+      <a-light type="point" color="#FFD700" intensity="1.0" position="2 3 -2" distance="10" decay="2"></a-light>
+      <a-light type="point" color="#87CEEB" intensity="1.0" position="-2 3 -2" distance="10" decay="2"></a-light>
+
+      <!-- Fundo da Cena -->
+      <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const scene = document.querySelector('a-scene');
@@ -34,16 +71,16 @@
           { id: 'gastrointestinal', url: 'assets/gastrointestinal.glb' },
           { id: 'pulmaotraqueia', url: 'assets/pulmaotraqueia.glb' },
         ];
-
         let isOrgansVisible = true;
+        let isDragging = false;
+        let previousMouseX = 0;
+        let previousMouseY = 0;
 
-        // Função para esconder o modelo de órgãos e mostrar a lista de modelos
         toggleButton.addEventListener('click', () => {
           isOrgansVisible = !isOrgansVisible;
           modelContainer.setAttribute('visible', isOrgansVisible);
 
           if (!isOrgansVisible) {
-            // Adiciona os modelos à cena
             models.forEach((model, index) => {
               const entity = document.createElement('a-entity');
               entity.setAttribute('id', model.id);
@@ -54,14 +91,9 @@
               entity.setAttribute('grabbable', '');
               entity.setAttribute('stretchable', '');
               entity.setAttribute('draggable', '');
-
-              // Adiciona um colisor para tornar o modelo clicável
-              entity.setAttribute('cursor-listener', '');
-
               scene.appendChild(entity);
             });
           } else {
-            // Remove os modelos da cena
             models.forEach((model) => {
               const entity = document.getElementById(model.id);
               if (entity) {
@@ -71,24 +103,17 @@
           }
         });
 
-        // Função para selecionar um modelo individualmente
         scene.addEventListener('click', (event) => {
           if (event.target.classList.contains('selectable-model')) {
             const selectedModel = event.target;
-
-            // Oculta todos os outros modelos
             models.forEach((model) => {
               const entity = document.getElementById(model.id);
               if (entity && entity !== selectedModel) {
                 entity.setAttribute('visible', false);
               }
             });
-
-            // Centraliza e amplia o modelo selecionado
             selectedModel.setAttribute('position', '0 3 -3');
             selectedModel.setAttribute('scale', '1 1 1');
-
-            // Adiciona interações para girar, ampliar e diminuir
             selectedModel.setAttribute('rotation', '0 0 0');
             selectedModel.setAttribute('animation__rotate', {
               property: 'rotation',
@@ -97,66 +122,57 @@
               dur: 10000,
               easing: 'linear',
             });
-
-            // Permite girar manualmente com o mouse ou controles VR
             selectedModel.setAttribute('look-at', '[camera]');
             selectedModel.setAttribute('click-drag', '');
 
-            // Ampliar e diminuir com o scroll do mouse
             selectedModel.addEventListener('wheel', (e) => {
               e.preventDefault();
               const scale = selectedModel.getAttribute('scale');
               const newScale = {
-                x: scale.x + e.deltaY * -0.01,
-                y: scale.y + e.deltaY * -0.01,
-                z: scale.z + e.deltaY * -0.01,
+                x: Math.max(0.1, scale.x + e.deltaY * -0.01),
+                y: Math.max(0.1, scale.y + e.deltaY * -0.01),
+                z: Math.max(0.1, scale.z + e.deltaY * -0.01),
               };
               selectedModel.setAttribute('scale', newScale);
+            });
+
+            selectedModel.addEventListener('mousedown', (e) => {
+              isDragging = true;
+              previousMouseX = e.clientX;
+              previousMouseY = e.clientY;
+              selectedModel.removeAttribute('animation__rotate');
+            });
+
+            selectedModel.addEventListener('mouseup', () => {
+              isDragging = false;
+              selectedModel.setAttribute('animation__rotate', {
+                property: 'rotation',
+                to: '0 360 0',
+                loop: true,
+                dur: 10000,
+                easing: 'linear',
+              });
+            });
+
+            selectedModel.addEventListener('mousemove', (e) => {
+              if (isDragging) {
+                const deltaX = e.clientX - previousMouseX;
+                const deltaY = e.clientY - previousMouseY;
+                previousMouseX = e.clientX;
+                previousMouseY = e.clientY;
+
+                const rotation = selectedModel.getAttribute('rotation');
+                const newRotation = {
+                  x: rotation.x + deltaY * 0.5,
+                  y: rotation.y + deltaX * 0.5,
+                  z: rotation.z,
+                };
+                selectedModel.setAttribute('rotation', newRotation);
+              }
             });
           }
         });
       });
     </script>
-  </head>
-  <body>
-    <button id="toggle-button">Mostrar Órgãos Individuais</button>
-    <a-scene vr-mode-ui="enabled: true">
-      <!-- Ativando WebXR para controlar o modelo -->
-      <a-entity laser-controls="hand: right"></a-entity>
-      <a-entity laser-controls="hand: left"></a-entity>
-
-      <!-- Cursor para interação com o mouse -->
-      <a-entity cursor="rayOrigin: mouse"></a-entity>
-
-      <!-- Câmera VR com controles -->
-      <a-entity id="rig" position="0 1.6 0">
-        <a-camera>
-          <a-entity oculus-touch-controls="hand: left"></a-entity>
-          <a-entity oculus-touch-controls="hand: right"></a-entity>
-        </a-camera>
-      </a-entity>
-
-      <!-- Modelo GLB interativo com rotação contínua no eixo Y -->
-      <a-entity
-        id="model-container"
-        gltf-model="url(assets/orgaos.glb)"
-        scale="0.5 0.5 0.5"
-        position="0 2.9 -3"
-        rotation="0 78 0"
-        grabbable
-        stretchable
-        draggable
-        animation="property: rotation; to: 0 438 0; loop: true; dur: 12000; easing: linear;">
-      </a-entity>
-
-      <!-- Luz ambiente -->
-      <a-light type="ambient" intensity="2.5"></a-light>
-
-      <!-- Luz direcional -->
-      <a-light type="directional" intensity="0.8" position="1 4 -3"></a-light>
-
-      <!-- Fundo -->
-      <a-sky color="#ECECEC"></a-sky>
-    </a-scene>
   </body>
 </html>
