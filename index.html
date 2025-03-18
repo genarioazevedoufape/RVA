@@ -49,11 +49,15 @@
               entity.setAttribute('id', model.id);
               entity.setAttribute('gltf-model', `url(${model.url})`);
               entity.setAttribute('scale', '0.5 0.5 0.5');
-              entity.setAttribute('position', { x: (index - 2) * 2, y: 1.5, z: -3 });
+              entity.setAttribute('position', { x: (index - 2) * 2, y: 3.3, z: -3 });
               entity.setAttribute('class', 'selectable-model');
               entity.setAttribute('grabbable', '');
               entity.setAttribute('stretchable', '');
               entity.setAttribute('draggable', '');
+
+              // Adiciona um colisor para tornar o modelo clicável
+              entity.setAttribute('cursor-listener', '');
+
               scene.appendChild(entity);
             });
           } else {
@@ -71,14 +75,44 @@
         scene.addEventListener('click', (event) => {
           if (event.target.classList.contains('selectable-model')) {
             const selectedModel = event.target;
+
+            // Oculta todos os outros modelos
             models.forEach((model) => {
               const entity = document.getElementById(model.id);
               if (entity && entity !== selectedModel) {
                 entity.setAttribute('visible', false);
               }
             });
-            selectedModel.setAttribute('position', '0 1.5 -3');
+
+            // Centraliza e amplia o modelo selecionado
+            selectedModel.setAttribute('position', '0 3 -3');
             selectedModel.setAttribute('scale', '1 1 1');
+
+            // Adiciona interações para girar, ampliar e diminuir
+            selectedModel.setAttribute('rotation', '0 0 0');
+            selectedModel.setAttribute('animation__rotate', {
+              property: 'rotation',
+              to: '0 360 0',
+              loop: true,
+              dur: 10000,
+              easing: 'linear',
+            });
+
+            // Permite girar manualmente com o mouse ou controles VR
+            selectedModel.setAttribute('look-at', '[camera]');
+            selectedModel.setAttribute('click-drag', '');
+
+            // Ampliar e diminuir com o scroll do mouse
+            selectedModel.addEventListener('wheel', (e) => {
+              e.preventDefault();
+              const scale = selectedModel.getAttribute('scale');
+              const newScale = {
+                x: scale.x + e.deltaY * -0.01,
+                y: scale.y + e.deltaY * -0.01,
+                z: scale.z + e.deltaY * -0.01,
+              };
+              selectedModel.setAttribute('scale', newScale);
+            });
           }
         });
       });
@@ -90,6 +124,9 @@
       <!-- Ativando WebXR para controlar o modelo -->
       <a-entity laser-controls="hand: right"></a-entity>
       <a-entity laser-controls="hand: left"></a-entity>
+
+      <!-- Cursor para interação com o mouse -->
+      <a-entity cursor="rayOrigin: mouse"></a-entity>
 
       <!-- Câmera VR com controles -->
       <a-entity id="rig" position="0 1.6 0">
