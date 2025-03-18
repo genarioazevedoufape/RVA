@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>VR 3D Image Viewer (Meta Quest)</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <style>
+      /* Estilo para o botão */
+      #toggle-button {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        padding: 10px 20px;
+        background-color: #0078d4;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        z-index: 1000;
+      }
+      #toggle-button:hover {
+        background-color: #005bb5;
+      }
+    </style>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const scene = document.querySelector('a-scene');
+        const toggleButton = document.getElementById('toggle-button');
+        const modelContainer = document.getElementById('model-container');
+        const models = [
+          { id: 'baco', url: 'assets/baco.glb' },
+          { id: 'coracao', url: 'assets/coracao.glb' },
+          { id: 'figado', url: 'assets/figado.glb' },
+          { id: 'gastrointestinal', url: 'assets/gastrointestinal.glb' },
+          { id: 'pulmaotraqueia', url: 'assets/pulmaotraqueia.glb' },
+        ];
+
+        let isOrgansVisible = true;
+
+        // Função para esconder o modelo de órgãos e mostrar a lista de modelos
+        toggleButton.addEventListener('click', () => {
+          isOrgansVisible = !isOrgansVisible;
+          modelContainer.setAttribute('visible', isOrgansVisible);
+
+          if (!isOrgansVisible) {
+            // Adiciona os modelos à cena
+            models.forEach((model, index) => {
+              const entity = document.createElement('a-entity');
+              entity.setAttribute('id', model.id);
+              entity.setAttribute('gltf-model', `url(${model.url})`);
+              entity.setAttribute('scale', '0.5 0.5 0.5');
+              entity.setAttribute('position', { x: (index - 2) * 2, y: 1.5, z: -3 });
+              entity.setAttribute('class', 'selectable-model');
+              entity.setAttribute('grabbable', '');
+              entity.setAttribute('stretchable', '');
+              entity.setAttribute('draggable', '');
+              scene.appendChild(entity);
+            });
+          } else {
+            // Remove os modelos da cena
+            models.forEach((model) => {
+              const entity = document.getElementById(model.id);
+              if (entity) {
+                scene.removeChild(entity);
+              }
+            });
+          }
+        });
+
+        // Função para selecionar um modelo individualmente
+        scene.addEventListener('click', (event) => {
+          if (event.target.classList.contains('selectable-model')) {
+            const selectedModel = event.target;
+            models.forEach((model) => {
+              const entity = document.getElementById(model.id);
+              if (entity && entity !== selectedModel) {
+                entity.setAttribute('visible', false);
+              }
+            });
+            selectedModel.setAttribute('position', '0 1.5 -3');
+            selectedModel.setAttribute('scale', '1 1 1');
+          }
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <button id="toggle-button">Mostrar Órgãos Individuais</button>
+    <a-scene vr-mode-ui="enabled: true">
+      <!-- Ativando WebXR para controlar o modelo -->
+      <a-entity laser-controls="hand: right"></a-entity>
+      <a-entity laser-controls="hand: left"></a-entity>
+
+      <!-- Câmera VR com controles -->
+      <a-entity id="rig" position="0 1.6 0">
+        <a-camera>
+          <a-entity oculus-touch-controls="hand: left"></a-entity>
+          <a-entity oculus-touch-controls="hand: right"></a-entity>
+        </a-camera>
+      </a-entity>
+
+      <!-- Modelo GLB interativo com rotação contínua no eixo Y -->
+      <a-entity
+        id="model-container"
+        gltf-model="url(assets/orgaos.glb)"
+        scale="0.5 0.5 0.5"
+        position="0 2.9 -3"
+        rotation="0 78 0"
+        grabbable
+        stretchable
+        draggable
+        animation="property: rotation; to: 0 438 0; loop: true; dur: 12000; easing: linear;">
+      </a-entity>
+
+      <!-- Luz ambiente -->
+      <a-light type="ambient" intensity="2.5"></a-light>
+
+      <!-- Luz direcional -->
+      <a-light type="directional" intensity="0.8" position="1 4 -3"></a-light>
+
+      <!-- Fundo -->
+      <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+  </body>
+</html>
