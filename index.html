@@ -44,16 +44,19 @@
       </a-entity>
 
       <!-- Iluminação Ambiente -->
-      <a-light type="ambient" color="#FFFFFF" intensity="1.2"></a-light>
+      <a-light type="ambient" color="#FFFFFF" intensity="0.9"></a-light>
 
       <!-- Luz Direcional (Simula o Sol) -->
-      <a-light type="directional" color="#FFFFFF" intensity="1.2" position="0 0 0" cast-shadow>
+      <a-light type="directional" color="#FFFFFF" intensity="1.8" position="-11 66 -11" cast-shadow>
         <a-entity position="0 0 0" rotation="0 0 0"></a-entity>
       </a-light>
 
-      <!-- Luz Pontual (Iluminação adicional) -->
-      <a-light type="point" color="#FFD700" intensity="1.0" position="2 3 -2" distance="10" decay="2"></a-light>
-      <a-light type="point" color="#87CEEB" intensity="1.0" position="-2 3 -2" distance="10" decay="2"></a-light>
+      <!-- Luzes Pontuais (Iluminação adicional) -->
+      <a-light type="point" color="#FFD700" intensity="1.5" position="15 3 -2" distance="10" decay="2" cast-shadow></a-light>
+      <a-light type="point" color="#87CEEB" intensity="1.5" position="-12 3 -2" distance="10" decay="2" cast-shadow></a-light>
+
+      <!-- Luz de Preenchimento (Fill Light) -->
+      <a-light type="point" color="#FFFFFF" intensity="1" position="0 3 2" distance="10" decay="2"></a-light>
 
       <!-- Fundo da Cena -->
       <a-sky color="#ECECEC"></a-sky>
@@ -125,13 +128,15 @@
             selectedModel.setAttribute('look-at', '[camera]');
             selectedModel.setAttribute('click-drag', '');
 
+            // Adiciona o evento de zoom diretamente ao modelo selecionado
             selectedModel.addEventListener('wheel', (e) => {
               e.preventDefault();
               const scale = selectedModel.getAttribute('scale');
+              const zoomFactor = 0.01; // Fator de zoom
               const newScale = {
-                x: Math.max(0.1, scale.x + e.deltaY * -0.01),
-                y: Math.max(0.1, scale.y + e.deltaY * -0.01),
-                z: Math.max(0.1, scale.z + e.deltaY * -0.01),
+                x: Math.max(0.1, scale.x + e.deltaY * -zoomFactor),
+                y: Math.max(0.1, scale.y + e.deltaY * -zoomFactor),
+                z: Math.max(0.1, scale.z + e.deltaY * -zoomFactor),
               };
               selectedModel.setAttribute('scale', newScale);
             });
